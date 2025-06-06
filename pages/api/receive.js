@@ -1,9 +1,6 @@
-// api/receive.js - Enhanced version to store prompts
-let promptStorage = []; // In-memory storage (for production, use a database)
-let latestPrompt = null;
+import storage from '../lib/storage.js';
 
 export default async function handler(req, res) {
-  // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -15,27 +12,22 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   if (req.method === 'GET') {
-    // Health check and status endpoint
+    const stats = storage.getStats();
     return res.status(200).json({
       message: "Vercel MCP Receiver is running",
       timestamp,
       endpoints: {
         "POST": "/api/receive - Send a prompt in the request body",
-        "GET": "/api/receive - This health check endpoint"
+        "GET": "/api/receive - This health check endpoint",
+        "GET": "/api/get-latest-prompt - Get the latest received prompt",
+        "GET": "/api/prompts - Get all prompts"
       },
-      stats: {
-        totalPrompts: promptStorage.length,
-        latestPrompt: latestPrompt?.timestamp || null
-      }
+      stats
     });
   }
 
   if (req.method === 'POST') {
     try {
-      console.log('Request method:', req.method);
-      console.log('Request headers:', req.headers);
-      console.log('Request body:', req.body);
-
       const { prompt } = req.body;
 
       if (!prompt) {
@@ -46,9 +38,6 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log('Processing prompt:', prompt);
-
-      // Store the prompt with metadata
       const promptData = {
         id: Date.now(),
         prompt,
@@ -62,14 +51,7 @@ export default async function handler(req, res) {
         }
       };
 
-      // Add to storage
-      promptStorage.push(promptData);
-      latestPrompt = promptData;
-
-      // Keep only last 100 prompts to prevent memory issues
-      if (promptStorage.length > 100) {
-        promptStorage = promptStorage.slice(-100);
-      }
+      storage.addPrompt(promptData);
 
       const response = {
         success: true,
@@ -78,13 +60,9 @@ export default async function handler(req, res) {
         processedResponse: `I received your message: "${prompt}". This prompt has been stored and is ready for UI generation!`,
         timestamp,
         metadata: promptData.metadata,
-        storageInfo: {
-          totalStored: promptStorage.length,
-          promptId: promptData.id
-        }
+        storageInfo: storage.getStats()
       };
 
-      console.log('Sending response:', response);
       return res.status(200).json(response);
 
     } catch (error) {
@@ -98,7 +76,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Method not allowed
   return res.status(405).json({
     success: false,
     error: 'Method not allowed',
