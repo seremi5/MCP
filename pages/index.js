@@ -1,3 +1,5 @@
+import DynamicUIGenerator from '../components/DynamicUIGenerator';
+
 export default function Home() {
-  return <div>API Receiver Ready</div>;
+  return <DynamicUIGenerator />;
 }
