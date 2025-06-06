@@ -1,6 +1,10 @@
-
 {
   "name": "vercel-api-receiver",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  }
 }
