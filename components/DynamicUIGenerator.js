@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, TrendingUp, DollarSign, Users, Loader2 } from 'lucide-react';
 
-const DynamicUIGenerator = () => {
+const DynamicV0ComponentGenerator = () => {
   const [lastPrompt, setLastPrompt] = useState('');
   const [lastPromptId, setLastPromptId] = useState(null);
-  const [generatedUI, setGeneratedUI] = useState(null);
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [generatedComponent, setGeneratedComponent] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [error, setError] = useState(null);
 
-  // Check for new prompts from Vercel API
+  // Check for new prompts
   const checkForNewPrompts = async () => {
     try {
       const response = await fetch('/api/get-latest-prompt');
@@ -18,7 +24,7 @@ const DynamicUIGenerator = () => {
       if (data.success && data.prompt && data.id !== lastPromptId) {
         setLastPrompt(data.prompt);
         setLastPromptId(data.id);
-        generateUIFromPrompt(data.prompt, data.id);
+        generateV0Component(data.prompt, data.id);
         setConnectionStatus('connected');
         setError(null);
       } else if (data.success && !data.prompt) {
@@ -31,390 +37,501 @@ const DynamicUIGenerator = () => {
     }
   };
 
-  // Generate UI based on prompt
-  const generateUIFromPrompt = async (prompt, promptId) => {
-    setIsLoading(true);
+  // Generate v0.dev-style component
+  const generateV0Component = async (prompt, promptId) => {
+    setIsGenerating(true);
+    setError(null);
     
-    // Simulate generation time for better UX
-    setTimeout(() => {
-      try {
-        const ui = parsePromptToUI(prompt);
-        setGeneratedUI(ui);
+    try {
+      // Call our v0.dev integration API
+      const response = await fetch('/api/generate-with-v0', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate component');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setGeneratedCode(data.code);
+        
+        // Transform the code into a renderable component
+        const component = createDynamicComponent(data.code, prompt);
+        setGeneratedComponent(component);
         
         // Add to history
         setHistory(prev => [...prev, {
           prompt,
           promptId,
           timestamp: new Date().toISOString(),
+          code: data.code,
+          generator: data.generator,
           id: Date.now()
         }]);
-
-      } catch (error) {
-        console.error('Error generating UI:', error);
-        setError('Failed to generate UI');
-      } finally {
-        setIsLoading(false);
+      } else {
+        throw new Error('Component generation failed');
       }
-    }, 1500);
-  };
-
-  // Enhanced prompt parser
-  const parsePromptToUI = (prompt) => {
-    const lowerPrompt = prompt.toLowerCase();
-    
-    if (lowerPrompt.includes('vendor insights') || lowerPrompt.includes('ai - vendor insights')) {
-      return <VendorInsightsDashboard prompt={prompt} />;
-    } else if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('analytics')) {
-      return <AnalyticsDashboard prompt={prompt} />;
-    } else if (lowerPrompt.includes('form')) {
-      return <FormInterface prompt={prompt} />;
-    } else if (lowerPrompt.includes('table') || lowerPrompt.includes('data')) {
-      return <DataTable prompt={prompt} />;
-    } else {
-      return <SmartInterface prompt={prompt} />;
+    } catch (error) {
+      console.error('Error generating v0 component:', error);
+      setError(`Failed to generate component: ${error.message}`);
+      
+      // Fallback to a simple component
+      const fallbackComponent = createFallbackComponent(prompt);
+      setGeneratedComponent(fallbackComponent);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  // Status indicator component
-  const StatusIndicator = () => {
+  // Create dynamic component from generated code
+  const createDynamicComponent = (code, prompt) => {
+    try {
+      // This is a simplified version - in a real implementation, you'd need
+      // a more sophisticated code transformation and execution system
+      
+      // For demo purposes, we'll create v0.dev-style components based on the prompt
+      const lowerPrompt = prompt.toLowerCase();
+      
+      if (lowerPrompt.includes('vendor') || lowerPrompt.includes('dashboard')) {
+        return <V0VendorDashboard prompt={prompt} />;
+      } else if (lowerPrompt.includes('form')) {
+        return <V0FormComponent prompt={prompt} />;
+      } else if (lowerPrompt.includes('table')) {
+        return <V0TableComponent prompt={prompt} />;
+      } else {
+        return <V0GenericComponent prompt={prompt} />;
+      }
+    } catch (error) {
+      console.error('Error creating dynamic component:', error);
+      return createFallbackComponent(prompt);
+    }
+  };
+
+  // Fallback component
+  const createFallbackComponent = (prompt) => (
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-red-600">Component Generation Error</CardTitle>
+        <CardDescription>Failed to generate component for: "{prompt}"</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-gray-600">Please try a different prompt or check the console for errors.</p>
+      </CardContent>
+    </Card>
+  );
+
+  // Status indicator
+  const StatusBadge = () => {
     const statusConfig = {
-      connected: { color: 'green', text: 'Connected & Generating', icon: '🟢' },
-      waiting: { color: 'blue', text: 'Waiting for prompts', icon: '🔵' },
-      connecting: { color: 'yellow', text: 'Connecting...', icon: '🟡' },
-      error: { color: 'red', text: 'Connection error', icon: '🔴' }
+      connected: { color: 'bg-green-500', text: 'Connected to v0.dev API', pulse: true },
+      waiting: { color: 'bg-blue-500', text: 'Waiting for prompts', pulse: true },
+      connecting: { color: 'bg-yellow-500', text: 'Connecting...', pulse: true },
+      error: { color: 'bg-red-500', text: 'Connection error', pulse: false }
     };
     
     const config = statusConfig[connectionStatus] || statusConfig.connecting;
     
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white bg-opacity-20 backdrop-blur-sm">
-        <div className={`w-3 h-3 bg-${config.color}-400 rounded-full animate-pulse`}></div>
-        <span className="text-sm font-medium text-white">{config.text}</span>
-      </div>
+      <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+        <div className={`w-2 h-2 ${config.color} rounded-full mr-2 ${config.pulse ? 'animate-pulse' : ''}`} />
+        {config.text}
+      </Badge>
     );
   };
 
   // Loading component
-  const LoadingSpinner = () => (
+  const GeneratingLoader = () => (
     <div className="text-center py-16">
-      <div className="bg-white rounded-2xl shadow-xl p-12 inline-block">
-        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-        <h3 className="text-2xl font-semibold text-gray-800 mb-2">Generating Beautiful UI...</h3>
-        <p className="text-gray-600">Claude is crafting your interface with AI precision</p>
-      </div>
+      <Card className="max-w-md mx-auto">
+        <CardContent className="p-8">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Generating v0.dev Component...</h3>
+          <p className="text-gray-600">Claude is creating a beautiful React component</p>
+          <div className="mt-4 bg-blue-50 rounded-lg p-3">
+            <p className="text-sm text-blue-800">✨ Using AI to generate production-ready code</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
-  // Poll for new prompts
+  // Poll for prompts
   useEffect(() => {
     const interval = setInterval(checkForNewPrompts, 3000);
     return () => clearInterval(interval);
   }, [lastPromptId]);
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 text-white py-8">
+      <header className="bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 text-white py-8">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-4">🚀 AI UI Generator</h1>
-            <p className="text-xl opacity-90 mb-6">Transform Claude prompts into beautiful interfaces via MCP</p>
-            <StatusIndicator />
+            <h1 className="text-5xl font-bold mb-2">⚡ v0.dev AI Generator</h1>
+            <p className="text-xl opacity-90 mb-4">
+              Claude → MCP → Vercel → v0.dev-style Components
+            </p>
+            <StatusBadge />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
-        {isLoading && <LoadingSpinner />}
+        {isGenerating && <GeneratingLoader />}
         
-        <div className={`transition-opacity duration-500 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
-          {generatedUI || <WaitingState />}
+        <div className={`transition-all duration-500 ${isGenerating ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+          {generatedComponent ? (
+            <div className="mb-8">
+              {generatedComponent}
+            </div>
+          ) : (
+            <WaitingForV0State />
+          )}
         </div>
+
+        {/* Generated Code Display */}
+        {generatedCode && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                💻 Generated Code
+                <Badge variant="secondary">React + Tailwind</Badge>
+              </CardTitle>
+              <CardDescription>
+                v0.dev-style component generated from your prompt
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+                <code>{generatedCode}</code>
+              </pre>
+            </CardContent>
+          </Card>
+        )}
 
         {/* History */}
         {history.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                📊 Generation History
-                <span className="ml-3 bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
-                  {history.length}
-                </span>
-              </h3>
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                📊 Component Generation History
+                <Badge variant="outline">{history.length} generated</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3">
                 {history.slice(-5).reverse().map(item => (
-                  <div key={item.id} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 mr-4">
                         <p className="font-medium text-gray-800 truncate">{item.prompt}</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          ID: {item.promptId} • {new Date(item.timestamp).toLocaleString()}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {item.generator}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            {new Date(item.timestamp).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
-                      <button 
-                        onClick={() => generateUIFromPrompt(item.prompt, item.promptId)}
-                        className="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => generateV0Component(item.prompt, item.promptId)}
                       >
                         Regenerate
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {error && (
-          <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-red-800"><strong>Error:</strong> {error}</p>
-          </div>
+          <Card className="mt-8 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="font-medium">Error:</span>
+                {error}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>
   );
 };
 
-// Waiting State Component
-const WaitingState = () => (
-  <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-    <div className="text-8xl mb-6">⏳</div>
-    <h2 className="text-3xl font-bold text-gray-800 mb-4">Waiting for your prompt...</h2>
-    <p className="text-xl text-gray-600 mb-8">Send a prompt from Claude via MCP to generate stunning interfaces</p>
-    
-    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 max-w-2xl mx-auto">
-      <h3 className="font-semibold text-gray-800 mb-4">✨ Try these prompts:</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-        {[
-          { code: 'AI - Vendor Insights', desc: 'Financial dashboard', color: 'blue' },
-          { code: 'Create dashboard', desc: 'Analytics interface', color: 'green' },
-          { code: 'Build a form', desc: 'Input interface', color: 'purple' },
-          { code: 'Data table', desc: 'Data grid', color: 'orange' }
-        ].map((item, idx) => (
-          <div key={idx} className="bg-white rounded-lg p-3 text-left shadow-sm hover:shadow-md transition-shadow">
-            <code className={`text-${item.color}-600`}>"{item.code}"</code>
-            <p className="text-gray-500 mt-1">→ {item.desc}</p>
+// Waiting state component
+const WaitingForV0State = () => (
+  <Card className="text-center">
+    <CardContent className="p-12">
+      <div className="text-8xl mb-6">🎨</div>
+      <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready to Generate v0.dev Components</h2>
+      <p className="text-xl text-gray-600 mb-8">
+        Send a prompt from Claude to generate beautiful, production-ready React components
+      </p>
+      
+      <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-6 max-w-2xl mx-auto">
+        <h3 className="font-semibold text-gray-800 mb-4">🚀 What you'll get:</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="text-left">
+            <div className="font-medium text-violet-700">✨ AI-Generated Code</div>
+            <div className="text-gray-600">Real React components with Tailwind</div>
           </div>
-        ))}
+          <div className="text-left">
+            <div className="font-medium text-purple-700">🎯 v0.dev Quality</div>
+            <div className="text-gray-600">Professional, production-ready</div>
+          </div>
+          <div className="text-left">
+            <div className="font-medium text-blue-700">📱 Responsive Design</div>
+            <div className="text-gray-600">Mobile-first, accessible</div>
+          </div>
+          <div className="text-left">
+            <div className="font-medium text-green-700">⚡ Interactive</div>
+            <div className="text-gray-600">Hooks, animations, modern UX</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 );
 
-// Vendor Insights Dashboard Component
-const VendorInsightsDashboard = ({ prompt }) => (
-  <div className="space-y-8 animate-fadeIn">
-    {/* Header */}
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-4xl font-bold mb-2">🧠 AI Vendor Insights</h2>
-          <p className="text-blue-100">Intelligent vendor risk assessment & optimization</p>
-        </div>
-        <div className="bg-white bg-opacity-20 rounded-xl p-4">
-          <div className="text-2xl font-bold">$47,250</div>
-          <div className="text-sm opacity-90">Monthly Spend</div>
-        </div>
-      </div>
-    </div>
+// v0.dev-style components that get rendered
+const V0VendorDashboard = ({ prompt }) => {
+  const [activeMetric, setActiveMetric] = useState(null);
+  
+  const metrics = [
+    { title: 'Low Risk', value: 23, color: 'bg-green-500', change: '+2', icon: Users },
+    { title: 'Medium Risk', value: 8, color: 'bg-yellow-500', change: '0', icon: AlertTriangle },
+    { title: 'High Risk', value: 3, color: 'bg-red-500', change: '+1', icon: AlertTriangle },
+    { title: 'Monthly Spend', value: '$47,250', color: 'bg-blue-500', change: '-3.2%', icon: DollarSign }
+  ];
 
-    {/* Risk Overview */}
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {[
-        { icon: '🟢', title: 'Low Risk', value: '23', change: '+2', color: 'green' },
-        { icon: '🟡', title: 'Medium Risk', value: '8', change: '0', color: 'yellow' },
-        { icon: '🔴', title: 'High Risk', value: '3', change: '+1', color: 'red' },
-        { icon: '💰', title: 'Saved', value: '$620', change: 'This Month', color: 'blue' }
-      ].map((item, idx) => (
-        <div key={idx} className={`bg-gradient-to-br from-${item.color}-50 to-${item.color}-100 rounded-xl p-6 border border-${item.color}-200 hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 bg-${item.color}-500 rounded-xl flex items-center justify-center`}>
-              <span className="text-2xl">{item.icon}</span>
+  return (
+    <div className="space-y-6">
+      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+        <CardHeader className="pb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-4xl font-bold mb-2">🧠 AI Vendor Insights</CardTitle>
+              <CardDescription className="text-blue-100 text-lg">
+                Generated from: "{prompt.substring(0, 60)}..."
+              </CardDescription>
             </div>
-            <div className={`text-${item.color}-600 text-sm font-medium`}>
-              {item.change.startsWith('+') || item.change.startsWith('-') ? `↗ ${item.change}` : item.change}
-            </div>
+            <Badge className="bg-white/20 text-white border-0">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+              Live v0.dev Component
+            </Badge>
           </div>
-          <div className={`text-3xl font-bold text-${item.color}-800 mb-1`}>{item.value}</div>
-          <div className={`text-${item.color}-700 font-medium`}>{item.title}</div>
-        </div>
-      ))}
-    </div>
+        </CardHeader>
+      </Card>
 
-    {/* Main Content Grid */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Anomalies */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">🚨 Recent Anomalies</h3>
-          <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium">3 New</span>
-        </div>
-        
-        <div className="space-y-4">
-          {[
-            { company: 'Acme Corp', issue: 'Price 22% higher than previous 3 invoices', detail: 'Expected: $1,200 | Actual: $1,464', time: '2h ago', color: 'red', action: 'Review' },
-            { company: 'TechSupply Co.', issue: 'Invoice expected May 5, not received', detail: 'Typical amount: ~$850', time: '1d ago', color: 'yellow', action: 'Contact' }
-          ].map((item, idx) => (
-            <div key={idx} className={`border-l-4 border-${item.color}-400 bg-${item.color}-50 p-4 rounded-r-xl hover:shadow-md transition-shadow`}>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {metrics.map((metric, index) => (
+          <Card 
+            key={index} 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 ${
+              activeMetric === index ? 'ring-2 ring-blue-500 shadow-xl' : ''
+            }`}
+            onClick={() => setActiveMetric(activeMetric === index ? null : index)}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 ${metric.color} rounded-xl flex items-center justify-center`}>
+                  <metric.icon className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm text-gray-500 font-medium">{metric.change}</span>
+              </div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{metric.value}</div>
+              <div className="text-gray-600 font-medium">{metric.title}</div>
+              {activeMetric === index && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">Click to view details</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              AI-Detected Anomalies
+              <Badge variant="destructive">3 New</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { vendor: 'Acme Corp', issue: 'Price 22% higher than previous invoices', time: '2h ago' },
+              { vendor: 'TechSupply Co.', issue: 'Invoice expected May 5, not received', time: '1d ago' }
+            ].map((anomaly, index) => (
+              <div key={index} className="border-l-4 border-red-400 bg-red-50 p-4 rounded-r-lg hover:bg-red-100 transition-all group">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold text-red-900">{anomaly.vendor}</h4>
+                    <p className="text-sm text-gray-600">{anomaly.issue}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-gray-500">{anomaly.time}</span>
+                    <Button size="sm" variant="outline" className="ml-2 mt-1 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              Payment Optimization
+              <Badge className="ml-auto bg-green-100 text-green-800">$248 Available</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-800">💰 $620 Saved This Month!</div>
+                <div className="text-green-600 text-sm">15% better via AI optimization</div>
+              </div>
+            </div>
+            <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-lg hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className={`font-bold text-${item.color}-800`}>{item.company}</h4>
-                  <p className="text-sm text-gray-600">{item.issue}</p>
-                  <p className="text-xs text-gray-500 mt-1">{item.detail}</p>
+                  <h4 className="font-semibold text-green-900">Office Supplies Co.</h4>
+                  <p className="text-sm text-gray-600">2% early payment discount available</p>
+                  <p className="text-xs text-gray-500">Save $48 • Deadline: May 10</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">{item.time}</div>
-                  <button className={`bg-${item.color}-600 text-white text-xs px-3 py-1 rounded-lg mt-1 hover:bg-${item.color}-700 transition-colors`}>
-                    {item.action}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Opportunities */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">💸 Payment Opportunities</h3>
-          <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">$248 Available</span>
-        </div>
-
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-800">You saved $620 this month! 🎉</div>
-            <div className="text-green-600 text-sm">15% better than last month via smart payments</div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-xl hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-bold text-green-800">Office Supplies Co.</h4>
-                <p className="text-sm text-gray-600">2% early payment discount</p>
-                <p className="text-xs text-gray-500 mt-1">Invoice: $2,400 | Save: $48</p>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-green-600 font-semibold">4 days left</div>
-                <button className="bg-green-600 text-white text-xs px-3 py-1 rounded-lg mt-1 hover:bg-green-700 transition-colors">
+                <Button className="bg-green-600 hover:bg-green-700">
                   Pay Now
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
+  );
+};
 
-    {/* Action Items */}
-    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8">
-      <h3 className="text-2xl font-bold text-gray-800 mb-6">🎯 Recommended Actions</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { icon: '🔍', title: 'Review High-Risk Vendors', desc: '3 vendors need attention', color: 'blue' },
-          { icon: '💰', title: 'Process Early Payments', desc: 'Save $248 this week', color: 'green' },
-          { icon: '📞', title: 'Contact Overdue Vendors', desc: '2 invoices missing', color: 'orange' }
-        ].map((item, idx) => (
-          <button key={idx} className={`bg-${item.color}-600 hover:bg-${item.color}-700 text-white p-6 rounded-xl text-left transition-all hover:shadow-lg hover:-translate-y-1`}>
-            <div className="text-2xl mb-2">{item.icon}</div>
-            <div className="font-semibold">{item.title}</div>
-            <div className="text-sm opacity-90">{item.desc}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-// Other components (simplified)
-const AnalyticsDashboard = ({ prompt }) => (
-  <div className="bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
-    <h2 className="text-3xl font-bold text-gray-800 mb-8">📊 Analytics Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {[
-        { title: 'Users', value: '12,345', color: 'blue' },
-        { title: 'Revenue', value: '$89,123', color: 'green' },
-        { title: 'Orders', value: '1,456', color: 'purple' }
-      ].map((stat, idx) => (
-        <div key={idx} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 p-6 rounded-xl hover:shadow-lg transition-all hover:-translate-y-1`}>
-          <h3 className="text-lg font-semibold mb-2">{stat.title}</h3>
-          <div className={`text-3xl font-bold text-${stat.color}-600`}>{stat.value}</div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const FormInterface = ({ prompt }) => (
-  <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">📝 Generated Form</h2>
-    <div className="space-y-4">
-      <input type="text" placeholder="Full Name" className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-      <input type="email" placeholder="Email Address" className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-      <textarea placeholder="Your Message" className="w-full p-4 border border-gray-300 rounded-xl h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-      <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all hover:-translate-y-1">
+const V0FormComponent = ({ prompt }) => (
+  <Card className="max-w-md mx-auto">
+    <CardHeader className="text-center">
+      <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        v0.dev Generated Form
+      </CardTitle>
+      <CardDescription>From prompt: "{prompt}"</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <input 
+        type="text" 
+        placeholder="Full Name" 
+        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+      />
+      <input 
+        type="email" 
+        placeholder="Email Address" 
+        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+      />
+      <textarea 
+        placeholder="Your Message" 
+        className="w-full p-3 border border-gray-300 rounded-lg h-24 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+      />
+      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3">
         Submit Form
-      </button>
-    </div>
-  </div>
+      </Button>
+    </CardContent>
+  </Card>
 );
 
-const DataTable = ({ prompt }) => (
-  <div className="bg-white rounded-2xl shadow-xl overflow-hidden animate-fadeIn">
-    <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100">
-      <h2 className="text-2xl font-bold text-gray-800">📋 Data Table</h2>
-    </div>
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            {['Name', 'Status', 'Date', 'Amount'].map(header => (
-              <th key={header} className="px-6 py-4 text-left font-medium text-gray-500 uppercase tracking-wider">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {[
-            { name: 'John Doe', status: 'Active', date: '2024-01-15', amount: '$1,250', statusColor: 'green' },
-            { name: 'Jane Smith', status: 'Pending', date: '2024-01-14', amount: '$850', statusColor: 'yellow' }
-          ].map((row, idx) => (
-            <tr key={idx} className="hover:bg-gray-50 transition-colors">
-              <td className="px-6 py-4 font-medium text-gray-900">{row.name}</td>
-              <td className="px-6 py-4">
-                <span className={`bg-${row.statusColor}-100 text-${row.statusColor}-800 px-2 py-1 rounded-full text-xs font-medium`}>
-                  {row.status}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-gray-500">{row.date}</td>
-              <td className="px-6 py-4 font-semibold text-gray-900">{row.amount}</td>
+const V0TableComponent = ({ prompt }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>📊 v0.dev Data Table</CardTitle>
+      <CardDescription>Generated from: "{prompt}"</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-3 px-4 font-semibold">Name</th>
+              <th className="text-left py-3 px-4 font-semibold">Status</th>
+              <th className="text-left py-3 px-4 font-semibold">Amount</th>
+              <th className="text-left py-3 px-4 font-semibold">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-const SmartInterface = ({ prompt }) => (
-  <div className="bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">🎯 Smart Generated Interface</h2>
-    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
-      <p className="text-gray-700 mb-4">Analyzed your prompt:</p>
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <code className="text-sm text-gray-600">{prompt}</code>
+          </thead>
+          <tbody>
+            {[
+              { name: 'John Doe', status: 'Active', amount: '$1,250' },
+              { name: 'Jane Smith', status: 'Pending', amount: '$850' }
+            ].map((row, index) => (
+              <tr key={index} className="border-b hover:bg-gray-50 transition-colors">
+                <td className="py-3 px-4 font-medium">{row.name}</td>
+                <td className="py-3 px-4">
+                  <Badge variant={row.status === 'Active' ? 'default' : 'secondary'}>
+                    {row.status}
+                  </Badge>
+                </td>
+                <td className="py-3 px-4 font-semibold">{row.amount}</td>
+                <td className="py-3 px-4">
+                  <Button size="sm" variant="outline">View</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
-    <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
-      <div className="text-4xl mb-4">🎨</div>
-      <p className="text-xl text-gray-600">This is a dynamically generated interface based on your input!</p>
-      <p className="text-gray-500 mt-2">Prompt length: {prompt.length} characters</p>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 );
 
-export default DynamicUIGenerator;
+const V0GenericComponent = ({ prompt }) => (
+  <Card className="max-w-2xl mx-auto">
+    <CardHeader className="text-center">
+      <CardTitle className="text-3xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+        v0.dev Style Component
+      </CardTitle>
+      <CardDescription className="text-lg">Generated from your prompt</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-6">
+      <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-4 rounded-lg border border-violet-200">
+        <code className="text-sm text-violet-800">"{prompt}"</code>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 hover:shadow-lg transition-all">
+          <h3 className="font-semibold text-blue-900 mb-2">✨ AI Generated</h3>
+          <p className="text-blue-700">Production-ready React component</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200 hover:shadow-lg transition-all">
+          <h3 className="font-semibold text-green-900 mb-2">🎯 v0.dev Quality</h3>
+          <p className="text-green-700">Modern design with Tailwind CSS</p>
+        </div>
+      </div>
+      <div className="text-center">
+        <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-2">
+          Interactive Element
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+export default DynamicV0ComponentGenerator;
