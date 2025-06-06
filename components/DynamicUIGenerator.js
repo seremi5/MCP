@@ -9,7 +9,7 @@ const DynamicUIGenerator = () => {
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [error, setError] = useState(null);
 
-  // Real function to check for new prompts from your Vercel API
+  // Check for new prompts from Vercel API
   const checkForNewPrompts = async () => {
     try {
       const response = await fetch('/api/get-latest-prompt');
@@ -25,559 +25,396 @@ const DynamicUIGenerator = () => {
         setConnectionStatus('waiting');
       }
     } catch (error) {
-      console.log('Error checking for prompts:', error);
+      console.error('Error checking for prompts:', error);
       setConnectionStatus('error');
       setError(error.message);
     }
   };
 
-  // Function to generate UI based on prompt with enhanced AI parsing
+  // Generate UI based on prompt
   const generateUIFromPrompt = async (prompt, promptId) => {
     setIsLoading(true);
     
-    try {
-      // Parse the prompt and generate appropriate UI
-      const ui = parsePromptToUI(prompt);
-      setGeneratedUI(ui);
-      
-      // Add to history
-      setHistory(prev => [...prev, {
-        prompt,
-        promptId,
-        timestamp: new Date().toISOString(),
-        id: Date.now()
-      }]);
-
-      // Mark prompt as processed (optional API call)
+    // Simulate generation time for better UX
+    setTimeout(() => {
       try {
-        await fetch(`/api/prompts/${promptId}/processed`, { method: 'POST' });
-      } catch (e) {
-        // Non-critical if this fails
-        console.log('Could not mark prompt as processed');
+        const ui = parsePromptToUI(prompt);
+        setGeneratedUI(ui);
+        
+        // Add to history
+        setHistory(prev => [...prev, {
+          prompt,
+          promptId,
+          timestamp: new Date().toISOString(),
+          id: Date.now()
+        }]);
+
+      } catch (error) {
+        console.error('Error generating UI:', error);
+        setError('Failed to generate UI');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error generating UI:', error);
-      setError('Failed to generate UI');
-    } finally {
-      setIsLoading(false);
-    }
+    }, 1500);
   };
 
-  // Enhanced prompt parser with more sophisticated detection
+  // Enhanced prompt parser
   const parsePromptToUI = (prompt) => {
     const lowerPrompt = prompt.toLowerCase();
     
-    // AI Vendor Insights - Priority detection
-    if (lowerPrompt.includes('vendor insights') || 
-        lowerPrompt.includes('ai - vendor insights') ||
-        (lowerPrompt.includes('vendor') && lowerPrompt.includes('invoice'))) {
-      return generateVendorInsights(prompt);
+    if (lowerPrompt.includes('vendor insights') || lowerPrompt.includes('ai - vendor insights')) {
+      return <VendorInsightsDashboard prompt={prompt} />;
+    } else if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('analytics')) {
+      return <AnalyticsDashboard prompt={prompt} />;
+    } else if (lowerPrompt.includes('form')) {
+      return <FormInterface prompt={prompt} />;
+    } else if (lowerPrompt.includes('table') || lowerPrompt.includes('data')) {
+      return <DataTable prompt={prompt} />;
+    } else {
+      return <SmartInterface prompt={prompt} />;
     }
-    
-    // Dashboard detection
-    if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('analytics')) {
-      return generateDashboard(prompt);
-    }
-    
-    // Form detection
-    if (lowerPrompt.includes('form') || lowerPrompt.includes('input') || 
-        lowerPrompt.includes('submit') || lowerPrompt.includes('registration')) {
-      return generateForm(prompt);
-    }
-    
-    // Data table detection
-    if (lowerPrompt.includes('table') || lowerPrompt.includes('list') || 
-        lowerPrompt.includes('data') || lowerPrompt.includes('grid')) {
-      return generateDataTable(prompt);
-    }
-
-    // Finance/accounting specific
-    if (lowerPrompt.includes('finance') || lowerPrompt.includes('accounting') ||
-        lowerPrompt.includes('billing') || lowerPrompt.includes('payment')) {
-      return generateFinanceUI(prompt);
-    }
-
-    // E-commerce detection
-    if (lowerPrompt.includes('product') || lowerPrompt.includes('shop') ||
-        lowerPrompt.includes('cart') || lowerPrompt.includes('store')) {
-      return generateEcommerceUI(prompt);
-    }
-    
-    // Default: Smart content display with prompt analysis
-    return generateSmartContentDisplay(prompt);
   };
 
-  // Enhanced Vendor Insights Generator
-  const generateVendorInsights = (prompt) => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">🧠 AI Vendor Insights Dashboard</h2>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-sm text-gray-600">Live</span>
-          </div>
-        </div>
-        
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <p className="text-blue-800 text-sm">
-            <strong>Generated from:</strong> "{prompt.substring(0, 100)}..."
-          </p>
-        </div>
-        
-        {/* Enhanced Risk Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-3xl mr-3">🟢</span>
-                <div>
-                  <p className="font-bold text-green-800 text-lg">Low Risk</p>
-                  <p className="text-green-600 text-xl font-semibold">23 Vendors</p>
-                </div>
-              </div>
-              <div className="text-green-600 text-sm">↗ +2</div>
-            </div>
-          </div>
-          
-          <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-3xl mr-3">🟡</span>
-                <div>
-                  <p className="font-bold text-yellow-800 text-lg">Medium Risk</p>
-                  <p className="text-yellow-600 text-xl font-semibold">8 Vendors</p>
-                </div>
-              </div>
-              <div className="text-yellow-600 text-sm">→ 0</div>
-            </div>
-          </div>
-          
-          <div className="bg-red-50 p-6 rounded-lg border border-red-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-3xl mr-3">🔴</span>
-                <div>
-                  <p className="font-bold text-red-800 text-lg">High Risk</p>
-                  <p className="text-red-600 text-xl font-semibold">3 Vendors</p>
-                </div>
-              </div>
-              <div className="text-red-600 text-sm">↑ +1</div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-800">$47,250</p>
-              <p className="text-gray-600">Monthly Spend</p>
-              <p className="text-green-600 text-sm">↓ -3.2% vs last month</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Anomalies Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="font-bold text-lg mb-4 flex items-center">
-              🚨 Recent Anomalies 
-              <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">3 New</span>
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-start p-3 bg-white rounded border-l-4 border-red-400 hover:shadow-sm transition-shadow">
-                <div>
-                  <p className="font-semibold text-red-800">Acme Corp</p>
-                  <p className="text-sm text-gray-600">Price 22% higher than previous 3 invoices</p>
-                  <p className="text-xs text-gray-500">Expected: $1,200 | Actual: $1,464</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500">2h ago</span>
-                  <button className="block mt-1 text-xs text-blue-600 hover:underline">Review</button>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-start p-3 bg-white rounded border-l-4 border-yellow-400 hover:shadow-sm transition-shadow">
-                <div>
-                  <p className="font-semibold text-yellow-800">TechSupply Co.</p>
-                  <p className="text-sm text-gray-600">Invoice expected May 5, not received</p>
-                  <p className="text-xs text-gray-500">Typical amount: ~$850</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500">1d ago</span>
-                  <button className="block mt-1 text-xs text-blue-600 hover:underline">Contact</button>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-start p-3 bg-white rounded border-l-4 border-orange-400 hover:shadow-sm transition-shadow">
-                <div>
-                  <p className="font-semibold text-orange-800">Office Plus</p>
-                  <p className="text-sm text-gray-600">Duplicate invoice detected</p>
-                  <p className="text-xs text-gray-500">INV-2024-0847 | $425.50</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500">3h ago</span>
-                  <button className="block mt-1 text-xs text-red-600 hover:underline">Flag</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Discount Opportunities */}
-          <div className="bg-blue-50 p-6 rounded-lg">
-            <h3 className="font-bold text-lg mb-4 flex items-center">
-              💸 Payment Opportunities
-              <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">$248 Available</span>
-            </h3>
-            
-            <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-green-800 font-semibold">You saved $620 this month via early payments! 🎉</p>
-              <p className="text-green-600 text-sm">15% better than last month</p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="bg-white p-3 rounded border-l-4 border-green-400">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-green-800">Office Supplies Co.</p>
-                    <p className="text-sm text-gray-600">2% discount if paid by May 10</p>
-                    <p className="text-xs text-gray-500">Invoice: $2,400 | Save: $48</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-green-600 font-semibold">4 days left</span>
-                    <button className="block mt-1 text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
-                      Pay Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-3 rounded border-l-4 border-blue-400">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-blue-800">CloudTech Services</p>
-                    <p className="text-sm text-gray-600">3% discount available</p>
-                    <p className="text-xs text-gray-500">Invoice: $5,000 | Save: $150</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-blue-600 font-semibold">7 days left</span>
-                    <button className="block mt-1 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
-                      Schedule
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white border-2 border-dashed border-gray-200 p-6 rounded-lg">
-          <h3 className="font-bold text-lg mb-4">🎯 Recommended Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 text-left bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-              <p className="font-semibold text-blue-800">Review High-Risk Vendors</p>
-              <p className="text-sm text-blue-600">3 vendors need attention</p>
-            </button>
-            
-            <button className="p-4 text-left bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-              <p className="font-semibold text-green-800">Process Early Payments</p>
-              <p className="text-sm text-green-600">Save $248 this week</p>
-            </button>
-            
-            <button className="p-4 text-left bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-              <p className="font-semibold text-orange-800">Contact Overdue Vendors</p>
-              <p className="text-sm text-orange-600">2 invoices missing</p>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const generateDashboard = (prompt) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-lg font-semibold mb-2">Total Users</h3>
-        <p className="text-3xl font-bold text-blue-600">1,234</p>
-      </div>
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-lg font-semibold mb-2">Revenue</h3>
-        <p className="text-3xl font-bold text-green-600">$56,789</p>
-      </div>
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-lg font-semibold mb-2">Orders</h3>
-        <p className="text-3xl font-bold text-purple-600">890</p>
-      </div>
-    </div>
-  );
-
-  const generateForm = (prompt) => (
-    <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
-      <h3 className="text-xl font-semibold mb-4">Generated Form</h3>
-      <div className="space-y-4">
-        <input 
-          type="text" 
-          placeholder="Name" 
-          className="w-full p-2 border rounded-lg"
-        />
-        <input 
-          type="email" 
-          placeholder="Email" 
-          className="w-full p-2 border rounded-lg"
-        />
-        <textarea 
-          placeholder="Message" 
-          className="w-full p-2 border rounded-lg h-24"
-        />
-        <button className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">
-          Submit
-        </button>
-      </div>
-    </div>
-  );
-
-  const generateDataTable = (prompt) => (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left">Name</th>
-            <th className="px-4 py-2 text-left">Status</th>
-            <th className="px-4 py-2 text-left">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-t">
-            <td className="px-4 py-2">Item 1</td>
-            <td className="px-4 py-2">Active</td>
-            <td className="px-4 py-2">2024-01-15</td>
-          </tr>
-          <tr className="border-t">
-            <td className="px-4 py-2">Item 2</td>
-            <td className="px-4 py-2">Pending</td>
-            <td className="px-4 py-2">2024-01-14</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-
-  // New UI generators for enhanced functionality
-  const generateFinanceUI = (prompt) => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">💰 Finance Management</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-green-800">Revenue</h3>
-            <p className="text-2xl font-bold text-green-600">$125,430</p>
-            <p className="text-sm text-green-500">↑ 12% from last month</p>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-800">Expenses</h3>
-            <p className="text-2xl font-bold text-blue-600">$78,250</p>
-            <p className="text-sm text-blue-500">↓ 5% from last month</p>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-purple-800">Profit</h3>
-            <p className="text-2xl font-bold text-purple-600">$47,180</p>
-            <p className="text-sm text-purple-500">↑ 28% from last month</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const generateEcommerceUI = (prompt) => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">🛍️ E-commerce Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-orange-50 p-4 rounded-lg text-center">
-            <p className="text-3xl">📦</p>
-            <p className="font-semibold">Orders</p>
-            <p className="text-xl font-bold">1,247</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg text-center">
-            <p className="text-3xl">💳</p>
-            <p className="font-semibold">Sales</p>
-            <p className="text-xl font-bold">$43,210</p>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg text-center">
-            <p className="text-3xl">👥</p>
-            <p className="font-semibold">Customers</p>
-            <p className="text-xl font-bold">892</p>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg text-center">
-            <p className="text-3xl">📈</p>
-            <p className="font-semibold">Conversion</p>
-            <p className="text-xl font-bold">3.2%</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const generateSmartContentDisplay = (prompt) => {
-    // Analyze prompt for key themes
-    const themes = [];
-    if (prompt.toLowerCase().includes('ai')) themes.push('🤖 AI');
-    if (prompt.toLowerCase().includes('data')) themes.push('📊 Data');
-    if (prompt.toLowerCase().includes('analytics')) themes.push('📈 Analytics');
-    if (prompt.toLowerCase().includes('dashboard')) themes.push('📋 Dashboard');
-    
-    return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-semibold mb-4">🎯 Smart Content Generator</h3>
-        <div className="mb-4">
-          <p className="text-gray-700 mb-2">Analyzed your prompt:</p>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <code className="text-sm">{prompt}</code>
-          </div>
-          {themes.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Detected themes:</p>
-              <div className="flex flex-wrap gap-2">
-                {themes.map((theme, idx) => (
-                  <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                    {theme}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="border-2 border-dashed border-gray-200 p-6 rounded-lg text-center">
-          <p className="text-gray-600 mb-2">
-            This is a dynamically generated interface based on your input!
-          </p>
-          <p className="text-sm text-gray-500">
-            Prompt length: {prompt.length} characters | 
-            Word count: {prompt.split(' ').length} words
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  // Enhanced status indicator
-  const getStatusIndicator = () => {
+  // Status indicator component
+  const StatusIndicator = () => {
     const statusConfig = {
-      connected: { color: 'green', text: 'Connected', icon: '🟢' },
+      connected: { color: 'green', text: 'Connected & Generating', icon: '🟢' },
       waiting: { color: 'blue', text: 'Waiting for prompts', icon: '🔵' },
-      connecting: { color: 'yellow', text: 'Connecting', icon: '🟡' },
+      connecting: { color: 'yellow', text: 'Connecting...', icon: '🟡' },
       error: { color: 'red', text: 'Connection error', icon: '🔴' }
     };
     
     const config = statusConfig[connectionStatus] || statusConfig.connecting;
     
     return (
-      <div className={`flex items-center space-x-2 px-3 py-1 rounded-full bg-${config.color}-50 border border-${config.color}-200`}>
-        <span className="animate-pulse">{config.icon}</span>
-        <span className={`text-sm text-${config.color}-800`}>{config.text}</span>
+      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white bg-opacity-20 backdrop-blur-sm">
+        <div className={`w-3 h-3 bg-${config.color}-400 rounded-full animate-pulse`}></div>
+        <span className="text-sm font-medium text-white">{config.text}</span>
       </div>
     );
   };
 
-  // Poll for new prompts every 3 seconds
+  // Loading component
+  const LoadingSpinner = () => (
+    <div className="text-center py-16">
+      <div className="bg-white rounded-2xl shadow-xl p-12 inline-block">
+        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+        <h3 className="text-2xl font-semibold text-gray-800 mb-2">Generating Beautiful UI...</h3>
+        <p className="text-gray-600">Claude is crafting your interface with AI precision</p>
+      </div>
+    </div>
+  );
+
+  // Poll for new prompts
   useEffect(() => {
     const interval = setInterval(checkForNewPrompts, 3000);
     return () => clearInterval(interval);
   }, [lastPromptId]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🚀 Dynamic UI Generator
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Send prompts from Claude via MCP to generate UI components in real-time
-          </p>
-          
-          <div className="flex justify-center items-center space-x-4">
-            {getStatusIndicator()}
-            {lastPrompt && (
-              <div className="max-w-md p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <strong>Latest:</strong> {lastPrompt.substring(0, 80)}
-                  {lastPrompt.length > 80 ? '...' : ''}
-                </p>
-              </div>
-            )}
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 text-white py-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4">🚀 AI UI Generator</h1>
+            <p className="text-xl opacity-90 mb-6">Transform Claude prompts into beautiful interfaces via MCP</p>
+            <StatusIndicator />
           </div>
+        </div>
+      </header>
 
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 max-w-md mx-auto">
-              <p className="text-sm text-red-800">
-                <strong>Error:</strong> {error}
-              </p>
-            </div>
-          )}
-        </header>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
+        {isLoading && <LoadingSpinner />}
+        
+        <div className={`transition-opacity duration-500 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+          {generatedUI || <WaitingState />}
+        </div>
 
-        {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 text-lg">Generating UI from your prompt...</p>
-            <p className="text-gray-500 text-sm">This may take a few seconds</p>
-          </div>
-        )}
-
-        <main className="mb-8">
-          {generatedUI || (
-            <div className="text-center py-16 bg-white rounded-lg shadow-lg">
-              <div className="text-6xl mb-4">⏳</div>
-              <p className="text-gray-500 text-xl mb-2">
-                Waiting for prompts from Claude...
-              </p>
-              <p className="text-gray-400">
-                Send a prompt via MCP to generate a dynamic UI interface!
-              </p>
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg max-w-md mx-auto">
-                <p className="text-sm text-gray-600 mb-2">Try sending prompts like:</p>
-                <ul className="text-xs text-gray-500 space-y-1">
-                  <li>• "AI - Vendor Insights" (generates vendor dashboard)</li>
-                  <li>• "Create a dashboard" (generates analytics view)</li>
-                  <li>• "Build a form" (generates input form)</li>
-                  <li>• "Show me data table" (generates data grid)</li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </main>
-
+        {/* History */}
         {history.length > 0 && (
-          <aside className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              📊 Generation History 
-              <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                {history.length} generated
-              </span>
-            </h3>
-            <div className="space-y-3">
-              {history.slice(-5).reverse().map(item => (
-                <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex-1 mr-4">
-                    <p className="text-sm font-medium truncate">{item.prompt}</p>
-                    <p className="text-xs text-gray-500">
-                      ID: {item.promptId} • {new Date(item.timestamp).toLocaleString()}
-                    </p>
+          <div className="mt-8">
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                📊 Generation History
+                <span className="ml-3 bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+                  {history.length}
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {history.slice(-5).reverse().map(item => (
+                  <div key={item.id} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 mr-4">
+                        <p className="font-medium text-gray-800 truncate">{item.prompt}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          ID: {item.promptId} • {new Date(item.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => generateUIFromPrompt(item.prompt, item.promptId)}
+                        className="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => generateUIFromPrompt(item.prompt, item.promptId)}
-                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                  >
-                    Regenerate
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </aside>
+          </div>
         )}
-      </div>
+
+        {error && (
+          <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-800"><strong>Error:</strong> {error}</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
+
+// Waiting State Component
+const WaitingState = () => (
+  <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+    <div className="text-8xl mb-6">⏳</div>
+    <h2 className="text-3xl font-bold text-gray-800 mb-4">Waiting for your prompt...</h2>
+    <p className="text-xl text-gray-600 mb-8">Send a prompt from Claude via MCP to generate stunning interfaces</p>
+    
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 max-w-2xl mx-auto">
+      <h3 className="font-semibold text-gray-800 mb-4">✨ Try these prompts:</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        {[
+          { code: 'AI - Vendor Insights', desc: 'Financial dashboard', color: 'blue' },
+          { code: 'Create dashboard', desc: 'Analytics interface', color: 'green' },
+          { code: 'Build a form', desc: 'Input interface', color: 'purple' },
+          { code: 'Data table', desc: 'Data grid', color: 'orange' }
+        ].map((item, idx) => (
+          <div key={idx} className="bg-white rounded-lg p-3 text-left shadow-sm hover:shadow-md transition-shadow">
+            <code className={`text-${item.color}-600`}>"{item.code}"</code>
+            <p className="text-gray-500 mt-1">→ {item.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// Vendor Insights Dashboard Component
+const VendorInsightsDashboard = ({ prompt }) => (
+  <div className="space-y-8 animate-fadeIn">
+    {/* Header */}
+    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-4xl font-bold mb-2">🧠 AI Vendor Insights</h2>
+          <p className="text-blue-100">Intelligent vendor risk assessment & optimization</p>
+        </div>
+        <div className="bg-white bg-opacity-20 rounded-xl p-4">
+          <div className="text-2xl font-bold">$47,250</div>
+          <div className="text-sm opacity-90">Monthly Spend</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Risk Overview */}
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {[
+        { icon: '🟢', title: 'Low Risk', value: '23', change: '+2', color: 'green' },
+        { icon: '🟡', title: 'Medium Risk', value: '8', change: '0', color: 'yellow' },
+        { icon: '🔴', title: 'High Risk', value: '3', change: '+1', color: 'red' },
+        { icon: '💰', title: 'Saved', value: '$620', change: 'This Month', color: 'blue' }
+      ].map((item, idx) => (
+        <div key={idx} className={`bg-gradient-to-br from-${item.color}-50 to-${item.color}-100 rounded-xl p-6 border border-${item.color}-200 hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className={`w-12 h-12 bg-${item.color}-500 rounded-xl flex items-center justify-center`}>
+              <span className="text-2xl">{item.icon}</span>
+            </div>
+            <div className={`text-${item.color}-600 text-sm font-medium`}>
+              {item.change.startsWith('+') || item.change.startsWith('-') ? `↗ ${item.change}` : item.change}
+            </div>
+          </div>
+          <div className={`text-3xl font-bold text-${item.color}-800 mb-1`}>{item.value}</div>
+          <div className={`text-${item.color}-700 font-medium`}>{item.title}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Main Content Grid */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Anomalies */}
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">🚨 Recent Anomalies</h3>
+          <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium">3 New</span>
+        </div>
+        
+        <div className="space-y-4">
+          {[
+            { company: 'Acme Corp', issue: 'Price 22% higher than previous 3 invoices', detail: 'Expected: $1,200 | Actual: $1,464', time: '2h ago', color: 'red', action: 'Review' },
+            { company: 'TechSupply Co.', issue: 'Invoice expected May 5, not received', detail: 'Typical amount: ~$850', time: '1d ago', color: 'yellow', action: 'Contact' }
+          ].map((item, idx) => (
+            <div key={idx} className={`border-l-4 border-${item.color}-400 bg-${item.color}-50 p-4 rounded-r-xl hover:shadow-md transition-shadow`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className={`font-bold text-${item.color}-800`}>{item.company}</h4>
+                  <p className="text-sm text-gray-600">{item.issue}</p>
+                  <p className="text-xs text-gray-500 mt-1">{item.detail}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">{item.time}</div>
+                  <button className={`bg-${item.color}-600 text-white text-xs px-3 py-1 rounded-lg mt-1 hover:bg-${item.color}-700 transition-colors`}>
+                    {item.action}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Opportunities */}
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">💸 Payment Opportunities</h3>
+          <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">$248 Available</span>
+        </div>
+
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-800">You saved $620 this month! 🎉</div>
+            <div className="text-green-600 text-sm">15% better than last month via smart payments</div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-xl hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-bold text-green-800">Office Supplies Co.</h4>
+                <p className="text-sm text-gray-600">2% early payment discount</p>
+                <p className="text-xs text-gray-500 mt-1">Invoice: $2,400 | Save: $48</p>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-green-600 font-semibold">4 days left</div>
+                <button className="bg-green-600 text-white text-xs px-3 py-1 rounded-lg mt-1 hover:bg-green-700 transition-colors">
+                  Pay Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Action Items */}
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8">
+      <h3 className="text-2xl font-bold text-gray-800 mb-6">🎯 Recommended Actions</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { icon: '🔍', title: 'Review High-Risk Vendors', desc: '3 vendors need attention', color: 'blue' },
+          { icon: '💰', title: 'Process Early Payments', desc: 'Save $248 this week', color: 'green' },
+          { icon: '📞', title: 'Contact Overdue Vendors', desc: '2 invoices missing', color: 'orange' }
+        ].map((item, idx) => (
+          <button key={idx} className={`bg-${item.color}-600 hover:bg-${item.color}-700 text-white p-6 rounded-xl text-left transition-all hover:shadow-lg hover:-translate-y-1`}>
+            <div className="text-2xl mb-2">{item.icon}</div>
+            <div className="font-semibold">{item.title}</div>
+            <div className="text-sm opacity-90">{item.desc}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// Other components (simplified)
+const AnalyticsDashboard = ({ prompt }) => (
+  <div className="bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
+    <h2 className="text-3xl font-bold text-gray-800 mb-8">📊 Analytics Dashboard</h2>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[
+        { title: 'Users', value: '12,345', color: 'blue' },
+        { title: 'Revenue', value: '$89,123', color: 'green' },
+        { title: 'Orders', value: '1,456', color: 'purple' }
+      ].map((stat, idx) => (
+        <div key={idx} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 p-6 rounded-xl hover:shadow-lg transition-all hover:-translate-y-1`}>
+          <h3 className="text-lg font-semibold mb-2">{stat.title}</h3>
+          <div className={`text-3xl font-bold text-${stat.color}-600`}>{stat.value}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const FormInterface = ({ prompt }) => (
+  <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
+    <h2 className="text-2xl font-bold text-gray-800 mb-6">📝 Generated Form</h2>
+    <div className="space-y-4">
+      <input type="text" placeholder="Full Name" className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+      <input type="email" placeholder="Email Address" className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+      <textarea placeholder="Your Message" className="w-full p-4 border border-gray-300 rounded-xl h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+      <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all hover:-translate-y-1">
+        Submit Form
+      </button>
+    </div>
+  </div>
+);
+
+const DataTable = ({ prompt }) => (
+  <div className="bg-white rounded-2xl shadow-xl overflow-hidden animate-fadeIn">
+    <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100">
+      <h2 className="text-2xl font-bold text-gray-800">📋 Data Table</h2>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50">
+          <tr>
+            {['Name', 'Status', 'Date', 'Amount'].map(header => (
+              <th key={header} className="px-6 py-4 text-left font-medium text-gray-500 uppercase tracking-wider">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {[
+            { name: 'John Doe', status: 'Active', date: '2024-01-15', amount: '$1,250', statusColor: 'green' },
+            { name: 'Jane Smith', status: 'Pending', date: '2024-01-14', amount: '$850', statusColor: 'yellow' }
+          ].map((row, idx) => (
+            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 font-medium text-gray-900">{row.name}</td>
+              <td className="px-6 py-4">
+                <span className={`bg-${row.statusColor}-100 text-${row.statusColor}-800 px-2 py-1 rounded-full text-xs font-medium`}>
+                  {row.status}
+                </span>
+              </td>
+              <td className="px-6 py-4 text-gray-500">{row.date}</td>
+              <td className="px-6 py-4 font-semibold text-gray-900">{row.amount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+const SmartInterface = ({ prompt }) => (
+  <div className="bg-white rounded-2xl shadow-xl p-8 animate-fadeIn">
+    <h2 className="text-2xl font-bold text-gray-800 mb-6">🎯 Smart Generated Interface</h2>
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+      <p className="text-gray-700 mb-4">Analyzed your prompt:</p>
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <code className="text-sm text-gray-600">{prompt}</code>
+      </div>
+    </div>
+    <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
+      <div className="text-4xl mb-4">🎨</div>
+      <p className="text-xl text-gray-600">This is a dynamically generated interface based on your input!</p>
+      <p className="text-gray-500 mt-2">Prompt length: {prompt.length} characters</p>
+    </div>
+  </div>
+);
 
 export default DynamicUIGenerator;
